@@ -31,17 +31,13 @@ def add():
 # --------- redirect ----------
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
-    accept = request.headers.get("Accept", "").lower()
 
-    # ✅ อนุญาต player เท่านั้น
+    # ❌ ถ้าเป็น player → ห้าม redirect
     if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return None
 
-    # 🔥 ถ้าเป็น browser → เด้ง
-    if "mozilla" in ua or "text/html" in accept:
-        return redirect("https://google.com")
-
-    return None
+    # 🔥 อย่างอื่นเด้งหมด
+    return redirect("https://google.com")
 
 
 # ================= ROOT =================
