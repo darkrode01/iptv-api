@@ -1,40 +1,36 @@
-from flask import Flask, request, Response, jsonify, redirect
-import time
+from flask import Flask, request, Response, redirect
 
 app = Flask(__name__)
 
-# 🔐 key
 ACCESS_KEY = "abc123"
 
-# 📊 เก็บคนออนไลน์
-online = {}
-TIMEOUT = 30  # วินาที
+@app.route("/")
+def api():
+    key = request.args.get("key")
 
-# 📺 ช่องตัวอย่าง (แก้ได้เอง)
-STREAMS = [
-    {
-        "name": "Test Channel 1",
-        "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        "group": "Digital TV",
-        "logo": ""
-    },
-    {
-        "name": "Sport Channel",
-        "url": "https://test-streams.mux.dev/test_001/stream.m3u8",
-        "group": "กีฬา",
-        "logo": ""
-    },
-    {
-        "name": "Cartoon Channel",
-        "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        "group": "การ์ตูน",
-        "logo": ""
-    }
-]
+    if key != ACCESS_KEY:
+        return "Unauthorized", 403
 
-# 🧹 ลบ IP ที่ไม่ active
-def clean_online():
-    now = time.time()
+    ua = request.headers.get("User-Agent", "").lower()
+
+    # 🔥 ตรวจว่าเป็น player หรือไม่
+    is_player = any(x in ua for x in [
+        "wiseplay", "vlc", "iptv", "exo", "player"
+    ])
+
+    # ❌ ถ้าไม่ใช่ player → เด้งเว็บ
+    if not is_player:
+        return redirect("https://streaming-fast.com/")
+
+    # ✅ ส่ง playlist
+    m3u = """#EXTM3U
+
+#EXTINF:-1 group-title="Demo", Test Channel
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+
+"""
+
+    return Response(m3u, mimetype="audio/x-mpegurl")    now = time.time()
     remove = []
     for ip, t in online.items():
         if now - t > TIMEOUT:
