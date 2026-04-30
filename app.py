@@ -1,6 +1,6 @@
 from flask import Flask, request, Response, redirect
 
-app = Flask(COPYTVj)
+app = Flask(__name__)
 
 ACCESS_KEY = "abc123"
 
