@@ -30,8 +30,16 @@ def add():
 # --------- redirect ----------
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
-    if "mozilla" in ua and "wiseplay" not in ua:
+    accept = request.headers.get("Accept", "").lower()
+
+    # ❌ ถ้าเป็น Wiseplay / Player → ห้าม redirect
+    if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
+        return None
+
+    # ✅ ถ้าเป็น browser จริง → redirect
+    if "text/html" in accept:
         return redirect("https://google.com")
+
     return None
 
 
