@@ -12,7 +12,7 @@ STREAMS = [
     {"name": "Cartoon", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "การ์ตูน"},
 ]
 
-# --------- นับคนออนไลน์แบบง่าย ---------
+# --------- นับคนออนไลน์ ---------
 online = {}
 TIMEOUT = 30
 
@@ -26,15 +26,93 @@ def add_online():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
-# --------- เช็ค browser → redirect ---------
+# --------- redirect browser ---------
 def maybe_redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
-    # ถ้าเป็น browser (มี mozilla) และไม่ใช่ player ที่พบบ่อย → redirect
     if "mozilla" in ua and all(x not in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return redirect("https://streaming-fast.com/")
     return None
 
-# --------- STEP A: Welcome ---------
+# --------- หน้า Welcome ---------
+@app.route("/")
+def welcome():
+    key = request.args.get("key")
+    if key != ACCESS_KEY:
+        return "Unauthorized", 403
+
+    r = maybe_redirect_browser()
+    if r:
+        return r
+
+    base = request.host_url.rstrip("/")
+
+    data = {
+        "name": "🅼🆈 IPTV",
+        "author": "Zank",
+        "groups": [
+            {
+                "name": "✨ เข้าสู่เมนูหลัก",
+                "url": f"{base}/home?key={ACCESS_KEY}"
+            }
+        ]
+    }
+
+    return jsonify(data)
+
+# --------- หน้า Home ---------
+@app.route("/home")
+def home():
+    key = request.args.get("key")
+    if key != ACCESS_KEY:
+        return "Unauthorized", 403
+
+    r = maybe_redirect_browser()
+    if r:
+        return r
+
+    base = request.host_url.rstrip("/")
+    clean_online()
+
+    data = {
+        "name": "DUFREE",
+        "groups": [
+            {"name": "📺 Digital TV", "url": f"{base}/playlist?group=Digital TV&key={ACCESS_KEY}"},
+            {"name": "🏀 กีฬา", "url": f"{base}/playlist?group=กีฬา&key={ACCESS_KEY}"},
+            {"name": "🎬 การ์ตูน", "url": f"{base}/playlist?group=การ์ตูน&key={ACCESS_KEY}"}
+        ],
+        "stations": [
+            {"name": f"🌐 Online {len(online)} คน", "import": False}
+        ]
+    }
+
+    return jsonify(data)
+
+# --------- playlist ---------
+@app.route("/playlist")
+def playlist():
+    key = request.args.get("key")
+    group = request.args.get("group")
+
+    if key != ACCESS_KEY:
+        return "Unauthorized", 403
+
+    add_online()
+    clean_online()
+
+    m3u = "#EXTM3U\n\n"
+
+    for ch in STREAMS:
+        if group and ch["group"] != group:
+            continue
+
+        m3u += f'#EXTINF:-1 group-title="{ch["group"]}",{ch["name"]}\n'
+        m3u += f'{ch["url"]}\n\n'
+
+    return Response(m3u, mimetype="audio/x-mpegurl")
+
+# --------- run ---------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)# --------- STEP A: Welcome ---------
 @app.route("/")
 def welcome():
     key = request.args.get("key")
