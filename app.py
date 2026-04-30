@@ -57,38 +57,84 @@ def root():
     if key != ACCESS_KEY:
         return "Unauthorized", 403
 
-    # ❗ ห้าม redirect ที่ root (สำคัญมาก)
+    ua = request.headers.get("User-Agent", "").lower()
+    accept = request.headers.get("Accept", "").lower()
+
     base = request.host_url.rstrip("/")
 
+    # ================= ✅ WISEPLAY =================
+    if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
+        return jsonify({
+            "name": "🅳🆄🅵🆁🅴🅴",
+            "author": "Zank",
+            "image": "https://cdn.dufreeapi.uk/dufreedd.png",
+            "imageScale": "center",
+            "url": f"{base}/enter?key={ACCESS_KEY}",
+            "groups": [
+                {
+                    "name": "✨ เข้าสู่ระบบ",
+                    "image": "https://cdn.dufreeapi.uk/dufree.gif",
+                    "imageScale": "center",
+                    "url": f"{base}/enter?key={ACCESS_KEY}",
+                    "import": False
+                }
+            ]
+        })
+
+    # ================= 🔥 BROWSER =================
+    if "text/html" in accept:
+        return f"""
+        <html>
+        <head>
+            <title>DUFREE</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body {{
+                    background:#000;
+                    color:#fff;
+                    text-align:center;
+                    font-family:sans-serif;
+                }}
+                .box {{
+                    margin-top:100px;
+                }}
+                img {{
+                    width:120px;
+                    border-radius:20px;
+                }}
+                .btn {{
+                    display:inline-block;
+                    margin-top:20px;
+                    padding:12px 20px;
+                    background:#ff0055;
+                    color:#fff;
+                    border-radius:10px;
+                    text-decoration:none;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="box">
+                <img src="https://cdn.dufreeapi.uk/dufreedd.png"><br>
+                <h2>DUFREE IPTV</h2>
+                <p>กำลังโหลด...</p>
+                <a class="btn" href="https://google.com">เข้าสู่ระบบ</a>
+            </div>
+
+            <script>
+                setTimeout(() => {{
+                    window.location.href = "https://google.com";
+                }}, 1500);
+            </script>
+        </body>
+        </html>
+        """
+
+    # ================= API FALLBACK =================
     return jsonify({
-        "name": "🅳🆄🅵🆁🅴🅴",
-        "author": "Zank",
-        "image": "https://cdn.dufreeapi.uk/dufreedd.png",
-        "imageScale": "center",
-
-        "url": f"{base}/enter?key={ACCESS_KEY}",
-
-        "groups": [
-            {
-                "name": "✨ เข้าสู่ระบบ",
-                "image": "https://cdn.dufreeapi.uk/dufree.gif",
-                "imageScale": "center",
-                "url": f"{base}/enter?key={ACCESS_KEY}",
-                "import": False
-            }
-        ],
-
-        "stations": [
-            {
-                "name": "⚠️ Demo IPTV",
-                "image": "https://media4.giphy.com/media/ky9nQzRcYaGhkwfH5i/200w.gif",
-                "imageScale": "center",
-                "info": "สำหรับทดสอบเท่านั้น",
-                "import": False
-            }
-        ]
+        "name": "API",
+        "status": "OK"
     })
-
 
 # ================= ENTER =================
 @app.route("/enter")
