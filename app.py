@@ -4,17 +4,15 @@ import time
 app = Flask(__name__)
 
 ACCESS_KEY = "abc123"
-
-# 🔥 เปิด/ปิดลิงก์
 SYSTEM_ON = True
 
-# 🔥 stream จริง (ซ่อน)
+# ===== STREAM =====
 STREAMS = [
     {"name": "CH1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV1"},
     {"name": "CH2", "url": "https://test-streams.mux.dev/test_001/stream.m3u8", "group": "Digital TV", "sub": "TV2"},
 ]
 
-# ===== online =====
+# ===== ONLINE =====
 online = {}
 TIMEOUT = 30
 
@@ -28,20 +26,28 @@ def add():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
-# ===== redirect =====
+# ===== REDIRECT (DUFREE STYLE) =====
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
+    accept = request.headers.get("Accept", "").lower()
+    sec_fetch = request.headers.get("Sec-Fetch-Dest", "").lower()
 
-    # ❗ allow wiseplay
+    # ✅ allow player
     if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return None
 
-    if "mozilla" in ua:
+    # ✅ allow unknown clients (กันพลาด)
+    if not accept:
+        return None
+
+    # 🔥 browser detection
+    if "text/html" in accept or sec_fetch == "document":
         return redirect("https://google.com")
 
     return None
 
-# ================= ROOT (ชั้นที่ 1) =================
+
+# ================= ROOT =================
 @app.route("/")
 def root():
     if not SYSTEM_ON:
@@ -51,32 +57,40 @@ def root():
     if key != ACCESS_KEY:
         return "Unauthorized", 403
 
-    r = redirect_browser()
-    if r:
-        return r
-
+    # ❗ ห้าม redirect ที่ root (สำคัญมาก)
     base = request.host_url.rstrip("/")
 
     return jsonify({
         "name": "🅳🆄🅵🆁🅴🅴",
         "author": "Zank",
-        "image": "https://cdn.dufreeapi.uk/dufree.gif",
+        "image": "https://cdn.dufreeapi.uk/dufreedd.png",
         "imageScale": "center",
 
-        # 🔥 chain ไปชั้น 2
         "url": f"{base}/enter?key={ACCESS_KEY}",
 
         "groups": [
             {
                 "name": "✨ เข้าสู่ระบบ",
-                "image": "https://cdn.dufreeapi.uk/dufreedd.png",
+                "image": "https://cdn.dufreeapi.uk/dufree.gif",
+                "imageScale": "center",
                 "url": f"{base}/enter?key={ACCESS_KEY}",
+                "import": False
+            }
+        ],
+
+        "stations": [
+            {
+                "name": "⚠️ Demo IPTV",
+                "image": "https://media4.giphy.com/media/ky9nQzRcYaGhkwfH5i/200w.gif",
+                "imageScale": "center",
+                "info": "สำหรับทดสอบเท่านั้น",
                 "import": False
             }
         ]
     })
 
-# ================= ENTER (ชั้นที่ 2) =================
+
+# ================= ENTER =================
 @app.route("/enter")
 def enter():
     if not SYSTEM_ON:
@@ -109,7 +123,8 @@ def enter():
         ]
     })
 
-# ================= GROUP (ชั้นที่ 3) =================
+
+# ================= GROUP =================
 @app.route("/group")
 def group():
     key = request.args.get("key")
@@ -136,7 +151,8 @@ def group():
         ]
     })
 
-# ================= PLAYLIST (ตัวจริง) =================
+
+# ================= PLAYLIST =================
 @app.route("/playlist")
 def playlist():
     if not SYSTEM_ON:
@@ -148,6 +164,7 @@ def playlist():
     if key != ACCESS_KEY:
         return "Unauthorized", 403
 
+    # ❗ playlist ไม่ redirect เด็ดขาด
     add()
     clean()
 
@@ -161,6 +178,7 @@ def playlist():
         m3u += f'{ch["url"]}\n\n'
 
     return Response(m3u, mimetype="audio/x-mpegurl")
+
 
 # ================= RUN =================
 if __name__ == "__main__":
