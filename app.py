@@ -30,7 +30,6 @@ def add():
 
 # --------- redirect ----------
 def redirect_browser():
-def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
     accept = request.headers.get("Accept", "").lower()
 
