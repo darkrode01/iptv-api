@@ -5,17 +5,19 @@ app = Flask(__name__)
 
 ACCESS_KEY = "abc123"
 
-# ================= STREAM =================
+# 🔥 เปิด/ปิดลิงก์
+SYSTEM_ON = True
+
+# 🔥 stream จริง (ซ่อน)
 STREAMS = [
     {"name": "CH1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV1"},
-    {"name": "CH2", "url": "https://test-streams.mux.dev/test_001/stream.m3u8", "group": "Digital TV", "sub": "TV1"},
-    {"name": "CH3", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV2"},
+    {"name": "CH2", "url": "https://test-streams.mux.dev/test_001/stream.m3u8", "group": "Digital TV", "sub": "TV2"},
 ]
 
+# ===== online =====
 online = {}
 TIMEOUT = 30
 
-# ================= ONLINE =================
 def clean():
     now = time.time()
     for ip in list(online.keys()):
@@ -26,20 +28,25 @@ def add():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
-# ================= REDIRECT =================
+# ===== redirect =====
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
 
-    # ❗ อย่า redirect wiseplay
-    if "mozilla" in ua and all(x not in ua for x in ["wiseplay", "vlc", "iptv", "exo"]):
+    # ❗ allow wiseplay
+    if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
+        return None
+
+    if "mozilla" in ua:
         return redirect("https://google.com")
 
     return None
 
-
-# ================= ROOT (หน้า DUFREE) =================
+# ================= ROOT (ชั้นที่ 1) =================
 @app.route("/")
 def root():
+    if not SYSTEM_ON:
+        return "SYSTEM OFF", 403
+
     key = request.args.get("key")
     if key != ACCESS_KEY:
         return "Unauthorized", 403
@@ -53,37 +60,28 @@ def root():
     return jsonify({
         "name": "🅳🆄🅵🆁🅴🅴",
         "author": "Zank",
-        "image": "https://cdn.dufreeapi.uk/dufreedd.png",
+        "image": "https://cdn.dufreeapi.uk/dufree.gif",
         "imageScale": "center",
 
-        # 🔥 chain ต่อ
-        "url": f"{base}/home?key={ACCESS_KEY}",
+        # 🔥 chain ไปชั้น 2
+        "url": f"{base}/enter?key={ACCESS_KEY}",
 
         "groups": [
             {
                 "name": "✨ เข้าสู่ระบบ",
-                "image": "https://cdn.dufreeapi.uk/dufree.gif",
-                "imageScale": "center",
-                "url": f"{base}/home?key={ACCESS_KEY}",
-                "import": False
-            }
-        ],
-
-        "stations": [
-            {
-                "name": "🚫 ห้ามขาย / ใช้ส่วนตัวเท่านั้น",
-                "image": "https://media4.giphy.com/media/ky9nQzRcYaGhkwfH5i/200w.gif",
-                "imageScale": "center",
-                "info": "⚠️ ระบบนี้เพื่อความบันเทิงส่วนบุคคลเท่านั้น",
+                "image": "https://cdn.dufreeapi.uk/dufreedd.png",
+                "url": f"{base}/enter?key={ACCESS_KEY}",
                 "import": False
             }
         ]
     })
 
+# ================= ENTER (ชั้นที่ 2) =================
+@app.route("/enter")
+def enter():
+    if not SYSTEM_ON:
+        return "SYSTEM OFF", 403
 
-# ================= HOME =================
-@app.route("/home")
-def home():
     key = request.args.get("key")
     if key != ACCESS_KEY:
         return "Unauthorized", 403
@@ -100,13 +98,7 @@ def home():
         "groups": [
             {
                 "name": "📺 Digital TV",
-                "image": "https://i.imgur.com/8Km9tLL.png",
-                "url": f"{base}/group?type=digital&key={ACCESS_KEY}"
-            },
-            {
-                "name": "🏀 กีฬา",
-                "image": "https://i.imgur.com/8Km9tLL.png",
-                "url": f"{base}/group?type=sport&key={ACCESS_KEY}"
+                "url": f"{base}/group?g=Digital TV&key={ACCESS_KEY}"
             }
         ],
         "stations": [
@@ -117,8 +109,7 @@ def home():
         ]
     })
 
-
-# ================= GROUP (TV1 TV2 แบบในรูป) =================
+# ================= GROUP (ชั้นที่ 3) =================
 @app.route("/group")
 def group():
     key = request.args.get("key")
@@ -136,21 +127,21 @@ def group():
         "groups": [
             {
                 "name": "TV 1",
-                "image": "https://i.imgur.com/1.png",
                 "url": f"{base}/playlist?sub=TV1&key={ACCESS_KEY}"
             },
             {
                 "name": "TV 2",
-                "image": "https://i.imgur.com/2.png",
                 "url": f"{base}/playlist?sub=TV2&key={ACCESS_KEY}"
             }
         ]
     })
 
-
-# ================= PLAYLIST (M3U) =================
+# ================= PLAYLIST (ตัวจริง) =================
 @app.route("/playlist")
 def playlist():
+    if not SYSTEM_ON:
+        return "SYSTEM OFF", 403
+
     key = request.args.get("key")
     sub = request.args.get("sub")
 
@@ -170,7 +161,6 @@ def playlist():
         m3u += f'{ch["url"]}\n\n'
 
     return Response(m3u, mimetype="audio/x-mpegurl")
-
 
 # ================= RUN =================
 if __name__ == "__main__":
