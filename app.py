@@ -51,22 +51,20 @@ def root():
     return jsonify({
         "name": "🅳🆄🅵🆁🅴🅴",
         "author": "Zank",
+
+        # 🔥 ใส่ตัวนี้เข้าไป
         "url": f"{base}/home?key={ACCESS_KEY}",
+
         "image": "https://i.imgur.com/8Km9tLL.png",
+
         "groups": [
             {
                 "name": "👉 เข้าสู่ระบบ",
                 "url": f"{base}/home?key={ACCESS_KEY}"
             }
-        ],
-        "stations": [
-            {
-                "name": "🚫 ห้ามจำหน่าย",
-                "info": "ระบบใช้ฟรี",
-                "import": False
-            }
         ]
     })
+
 
 
 # ================= HOME =================
