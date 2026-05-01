@@ -36,7 +36,7 @@ def redirect_browser():
 
     return redirect("https://google.com")
 
-# ================= ROOT (GATEWAY) =================
+# ================= ROOT =================
 @app.route("/")
 def root():
     key = request.args.get("key")
@@ -54,9 +54,7 @@ def root():
         "author": "Zank",
         "image": "https://cdn.dufreeapi.uk/dufree.gif",
 
-        # chain ไปตัวจริง
-        "url": f"{base}/main/home?key={ACCESS_KEY}",
-
+        # ❌ ไม่มี "url" แล้ว (สำคัญมาก)
         "groups": [
             {
                 "name": "👉 เข้าสู่ระบบ",
@@ -64,17 +62,10 @@ def root():
                 "url": f"{base}/main/home?key={ACCESS_KEY}",
                 "import": False
             }
-        ],
-
-        "stations": [
-            {
-                "name": "⚠️ Demo IPTV",
-                "import": False
-            }
         ]
     })
 
-# ================= HOME (PRO UI) =================
+# ================= HOME =================
 @app.route("/main/home")
 def home():
     key = request.args.get("key")
@@ -95,6 +86,7 @@ def home():
             }
         ],
 
+        # 🔥 PRO refresh + realtime
         "stations": [
             {
                 "name": f"🌐 Online {len(online)} คน",
