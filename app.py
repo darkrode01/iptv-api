@@ -12,7 +12,7 @@ STREAMS = [
     {"name": "CH3", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV 3"},
 ]
 
-# ===== ONLINE SYSTEM =====
+# ===== ONLINE =====
 online = {}
 TIMEOUT = 30
 
@@ -26,15 +26,20 @@ def add():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
-# ===== REDIRECT กัน browser =====
+# ===== REDIRECT SAFE =====
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
+    accept = request.headers.get("Accept", "").lower()
 
-    # allow player
+    # ✅ allow player
     if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return None
 
-    return redirect("https://google.com")
+    # ✅ redirect เฉพาะ browser จริง
+    if "text/html" in accept:
+        return redirect("https://google.com")
+
+    return None
 
 # ================= ROOT =================
 @app.route("/")
@@ -50,15 +55,13 @@ def root():
     base = request.host_url.rstrip("/")
 
     return jsonify({
-        "name": "🅳🆄🅵🆁🅴🅴",
+        "name": "DUFREE",
         "author": "Zank",
-        "image": "https://cdn.dufreeapi.uk/dufree.gif",
 
-        # ❌ ไม่มี "url" แล้ว (สำคัญมาก)
+        # ❌ ไม่มี url (สำคัญมาก)
         "groups": [
             {
-                "name": "👉 เข้าสู่ระบบ",
-                "image": "https://cdn.dufreeapi.uk/dufreedd.png",
+                "name": "👉 ENTER",
                 "url": f"{base}/main/home?key={ACCESS_KEY}",
                 "import": False
             }
@@ -81,15 +84,13 @@ def home():
         "groups": [
             {
                 "name": "📺 Digital TV",
-                "image": "https://i.imgur.com/8Km9tLL.png",
                 "url": f"{base}/main/group?g=Digital TV&key={ACCESS_KEY}"
             }
         ],
 
-        # 🔥 PRO refresh + realtime
         "stations": [
             {
-                "name": f"🌐 Online {len(online)} คน",
+                "name": f"🌐 Online {len(online)}",
                 "import": False
             },
             {
@@ -97,7 +98,7 @@ def home():
                 "import": False
             },
             {
-                "name": f"🔄 Refresh {int(time.time())}",
+                "name": f"🔄 {int(time.time())}",
                 "import": False
             }
         ]
@@ -116,20 +117,17 @@ def group():
 
     subs = list(set([s["sub"] for s in STREAMS if s["group"] == g]))
 
-    groups = []
-    for sub in subs:
-        groups.append({
-            "name": sub,
-            "image": "https://i.imgur.com/8Km9tLL.png",
-            "url": f"{base}/main/channels?sub={sub}&key={ACCESS_KEY}"
-        })
-
     return jsonify({
         "name": g,
-        "groups": groups
+        "groups": [
+            {
+                "name": sub,
+                "url": f"{base}/main/channels?sub={sub}&key={ACCESS_KEY}"
+            } for sub in subs
+        ]
     })
 
-# ================= CHANNELS =================
+# ================= CHANNEL =================
 @app.route("/main/channels")
 def channels():
     key = request.args.get("key")
@@ -141,18 +139,14 @@ def channels():
     add()
     clean()
 
-    stations = []
-
-    for s in STREAMS:
-        if s["sub"] == sub:
-            stations.append({
-                "name": s["name"],
-                "url": s["url"]
-            })
-
     return jsonify({
         "name": sub,
-        "stations": stations
+        "stations": [
+            {
+                "name": s["name"],
+                "url": s["url"]
+            } for s in STREAMS if s["sub"] == sub
+        ]
     })
 
 # ================= RUN =================
