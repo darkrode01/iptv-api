@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify, redirect
-import time, os
+import time
+import os
 
 app = Flask(__name__)
+
 ACCESS_KEY = "abc123"
 
 STREAMS = [
@@ -10,6 +12,7 @@ STREAMS = [
     {"name": "CH3", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV 3"},
 ]
 
+# ===== ONLINE SYSTEM =====
 online = {}
 TIMEOUT = 30
 
@@ -23,27 +26,23 @@ def add():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
-# 🔥 redirect เฉพาะ browser
+# ===== REDIRECT กัน browser =====
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
-    accept = request.headers.get("Accept", "").lower()
 
+    # allow player
     if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return None
 
-    if "text/html" in accept:
-        return redirect("https://google.com")
+    return redirect("https://google.com")
 
-    return None
-
-# ================= ROOT (ปลอม) =================
+# ================= ROOT (GATEWAY) =================
 @app.route("/")
 def root():
     key = request.args.get("key")
     if key != ACCESS_KEY:
-        return "403", 403
+        return "Unauthorized", 403
 
-    # ❗ redirect เฉพาะ browser
     r = redirect_browser()
     if r:
         return r
@@ -53,15 +52,15 @@ def root():
     return jsonify({
         "name": "🅳🆄🅵🆁🅴🅴",
         "author": "Zank",
-        "image": "https://cdn.dufreeapi.uk/dufreedd.png",
-        "imageScale": "center",
+        "image": "https://cdn.dufreeapi.uk/dufree.gif",
 
-        # ❗ ไม่ใช้ url loop
+        # chain ไปตัวจริง
+        "url": f"{base}/main/home?key={ACCESS_KEY}",
+
         "groups": [
             {
-                "name": "ยินดีต้อนรับ",
-                "image": "https://cdn.dufreeapi.uk/dufree.gif",
-                "imageScale": "center",
+                "name": "👉 เข้าสู่ระบบ",
+                "image": "https://cdn.dufreeapi.uk/dufreedd.png",
                 "url": f"{base}/main/home?key={ACCESS_KEY}",
                 "import": False
             }
@@ -69,33 +68,44 @@ def root():
 
         "stations": [
             {
-                "name": "🚫 Demo เท่านั้น",
+                "name": "⚠️ Demo IPTV",
                 "import": False
             }
         ]
     })
 
-# ================= REAL HOME =================
+# ================= HOME (PRO UI) =================
 @app.route("/main/home")
-def main_home():
+def home():
     key = request.args.get("key")
     if key != ACCESS_KEY:
-        return "403", 403
+        return "Unauthorized", 403
 
     base = request.host_url.rstrip("/")
     clean()
 
     return jsonify({
         "name": "DUFREE MENU",
+
         "groups": [
             {
                 "name": "📺 Digital TV",
+                "image": "https://i.imgur.com/8Km9tLL.png",
                 "url": f"{base}/main/group?g=Digital TV&key={ACCESS_KEY}"
             }
         ],
+
         "stations": [
             {
                 "name": f"🌐 Online {len(online)} คน",
+                "import": False
+            },
+            {
+                "name": f"🕒 {time.strftime('%H:%M:%S')}",
+                "import": False
+            },
+            {
+                "name": f"🔄 Refresh {int(time.time())}",
                 "import": False
             }
         ]
@@ -108,42 +118,49 @@ def group():
     g = request.args.get("g")
 
     if key != ACCESS_KEY:
-        return "403", 403
+        return "Unauthorized", 403
 
     base = request.host_url.rstrip("/")
 
     subs = list(set([s["sub"] for s in STREAMS if s["group"] == g]))
 
+    groups = []
+    for sub in subs:
+        groups.append({
+            "name": sub,
+            "image": "https://i.imgur.com/8Km9tLL.png",
+            "url": f"{base}/main/channels?sub={sub}&key={ACCESS_KEY}"
+        })
+
     return jsonify({
         "name": g,
-        "groups": [
-            {
-                "name": sub,
-                "url": f"{base}/main/channels?sub={sub}&key={ACCESS_KEY}"
-            } for sub in subs
-        ]
+        "groups": groups
     })
 
-# ================= CHANNEL =================
+# ================= CHANNELS =================
 @app.route("/main/channels")
 def channels():
     key = request.args.get("key")
     sub = request.args.get("sub")
 
     if key != ACCESS_KEY:
-        return "403", 403
+        return "Unauthorized", 403
 
     add()
     clean()
 
-    return jsonify({
-        "name": sub,
-        "stations": [
-            {
+    stations = []
+
+    for s in STREAMS:
+        if s["sub"] == sub:
+            stations.append({
                 "name": s["name"],
                 "url": s["url"]
-            } for s in STREAMS if s["sub"] == sub
-        ]
+            })
+
+    return jsonify({
+        "name": sub,
+        "stations": stations
     })
 
 # ================= RUN =================
