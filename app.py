@@ -1,18 +1,30 @@
 from flask import Flask, request, jsonify, redirect
-import time
-import os
+import time, os
 
 app = Flask(__name__)
 
 ACCESS_KEY = "abc123"
 
+# ================= STREAM =================
 STREAMS = [
+    # TV
     {"name": "CH1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV 1"},
     {"name": "CH2", "url": "https://test-streams.mux.dev/test_001/stream.m3u8", "group": "Digital TV", "sub": "TV 2"},
-    {"name": "CH3", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV 3"},
+
+    # กีฬา
+    {"name": "SPORT 1", "url": "https://test-streams.mux.dev/test_001/stream.m3u8", "group": "กีฬา", "sub": "Football"},
+
+    # หนัง
+    {"name": "MOVIE 1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "หนังออนไลน์", "sub": "Action"},
+
+    # ซีรีย์
+    {"name": "SERIES 1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "ซีรีย์", "sub": "K-Series"},
+
+    # การ์ตูน
+    {"name": "CARTOON 1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "การ์ตูน", "sub": "Anime"},
 ]
 
-# ===== ONLINE =====
+# ================= ONLINE =================
 online = {}
 TIMEOUT = 30
 
@@ -26,16 +38,14 @@ def add():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
-# ===== REDIRECT SAFE =====
+# ================= BLOCK BROWSER =================
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
     accept = request.headers.get("Accept", "").lower()
 
-    # ✅ allow player
     if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return None
 
-    # ✅ redirect เฉพาะ browser จริง
     if "text/html" in accept:
         return redirect("https://google.com")
 
@@ -57,55 +67,63 @@ def root():
     return jsonify({
         "name": "DUFREE",
         "author": "Zank",
+        "image": "https://cdn.dufreeapi.uk/dufree.gif",
 
-        # ❌ ไม่มี url (สำคัญมาก)
         "groups": [
             {
-                "name": "👉 ENTER",
-                "url": f"{base}/main/home?key={ACCESS_KEY}",
+                "name": "👉 เข้าสู่ระบบ",
+                "image": "https://cdn.dufreeapi.uk/dufreedd.png",
+                "url": f"{base}/home?key={ACCESS_KEY}",
+                "import": False
+            }
+        ],
+
+        "stations": [
+            {
+                "name": "⚠️ Demo IPTV",
                 "import": False
             }
         ]
     })
 
 # ================= HOME =================
-@app.route("/main/home")
+@app.route("/home")
 def home():
     key = request.args.get("key")
     if key != ACCESS_KEY:
         return "Unauthorized", 403
 
-    base = request.host_url.rstrip("/")
     clean()
+    base = request.host_url.rstrip("/")
 
     return jsonify({
         "name": "DUFREE MENU",
 
+        # 🔥 GRID MENU
         "groups": [
-            {
-                "name": "📺 Digital TV",
-                "url": f"{base}/main/group?g=Digital TV&key={ACCESS_KEY}"
-            }
+            {"name": "📺 Digital TV", "image": "https://i.imgur.com/8Km9tLL.png", "url": f"{base}/group?g=Digital TV&key={ACCESS_KEY}"},
+            {"name": "🏀 กีฬา", "image": "https://cdn-icons-png.flaticon.com/512/857/857455.png", "url": f"{base}/group?g=กีฬา&key={ACCESS_KEY}"},
+            {"name": "🎬 หนังออนไลน์", "image": "https://cdn-icons-png.flaticon.com/512/3103/3103446.png", "url": f"{base}/group?g=หนังออนไลน์&key={ACCESS_KEY}"},
+            {"name": "📺 ซีรีย์", "image": "https://cdn-icons-png.flaticon.com/512/3659/3659899.png", "url": f"{base}/group?g=ซีรีย์&key={ACCESS_KEY}"},
+            {"name": "🧸 การ์ตูน", "image": "https://cdn-icons-png.flaticon.com/512/616/616408.png", "url": f"{base}/group?g=การ์ตูน&key={ACCESS_KEY}"}
         ],
 
+        # 🔥 STATUS + REFRESH
         "stations": [
+            {"name": f"🌐 Online {len(online)} คน", "import": False},
+            {"name": f"🕒 {time.strftime('%H:%M:%S')}", "import": False},
+
+            # 🔥 ปุ่มรีเฟรช (สำคัญ)
             {
-                "name": f"🌐 Online {len(online)}",
-                "import": False
-            },
-            {
-                "name": f"🕒 {time.strftime('%H:%M:%S')}",
-                "import": False
-            },
-            {
-                "name": f"🔄 {int(time.time())}",
-                "import": False
+                "name": "🔄 รีเฟรช",
+                "image": "https://cdn-icons-png.flaticon.com/512/545/545682.png",
+                "url": f"{base}/home?key={ACCESS_KEY}&t={int(time.time())}"
             }
         ]
     })
 
 # ================= GROUP =================
-@app.route("/main/group")
+@app.route("/group")
 def group():
     key = request.args.get("key")
     g = request.args.get("g")
@@ -122,13 +140,13 @@ def group():
         "groups": [
             {
                 "name": sub,
-                "url": f"{base}/main/channels?sub={sub}&key={ACCESS_KEY}"
+                "url": f"{base}/channels?sub={sub}&key={ACCESS_KEY}"
             } for sub in subs
         ]
     })
 
 # ================= CHANNEL =================
-@app.route("/main/channels")
+@app.route("/channels")
 def channels():
     key = request.args.get("key")
     sub = request.args.get("sub")
