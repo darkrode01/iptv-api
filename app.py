@@ -47,6 +47,10 @@ def root():
     if key != ACCESS_KEY:
         return "403", 403
 
+    r = redirect_browser()   # 🔥 เพิ่มบรรทัดนี้
+    if r:
+        return r
+
     base = request.host_url.rstrip("/")
 
     return jsonify({
@@ -54,19 +58,17 @@ def root():
         "author": "Zank",
         "image": "https://i.imgur.com/8Km9tLL.png",
         "url": f"{base}/home?key={ACCESS_KEY}",
-
         "groups": [
             {
                 "name": "👉 เข้าสู่ระบบ",
                 "url": f"{base}/home?key={ACCESS_KEY}",
-                "import": False   # 🔥 เพิ่มแล้ว
+                "import": False
             }
         ],
-
         "stations": [
             {
                 "name": "⚠️ Demo IPTV",
-                "import": False   # 🔥 เพิ่มแล้ว
+                "import": False
             }
         ]
     })
