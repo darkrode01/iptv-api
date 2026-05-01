@@ -5,18 +5,17 @@ app = Flask(__name__)
 
 ACCESS_KEY = "abc123"
 
-# 🔥 แบ่งเป็น group + sub
+# 🔥 STREAM
 STREAMS = [
     {"name": "CH1", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV 1"},
     {"name": "CH2", "url": "https://test-streams.mux.dev/test_001/stream.m3u8", "group": "Digital TV", "sub": "TV 2"},
     {"name": "CH3", "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "group": "Digital TV", "sub": "TV 3"},
 ]
 
+# 🔥 ONLINE
 online = {}
 TIMEOUT = 30
 
-
-# --------- online ----------
 def clean():
     now = time.time()
     for ip in list(online.keys()):
@@ -24,20 +23,24 @@ def clean():
             del online[ip]
 
 def add():
-    ip = request.remote_addr
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     online[ip] = time.time()
 
 
-# --------- redirect ----------
+# 🔥 REDIRECT (เวอร์ชั่นเสถียร)
 def redirect_browser():
     ua = request.headers.get("User-Agent", "").lower()
+    accept = request.headers.get("Accept", "").lower()
 
-    # ❌ ถ้าเป็น player → ห้าม redirect
+    # ✅ อนุญาต player
     if any(x in ua for x in ["wiseplay", "vlc", "exo", "iptv"]):
         return None
 
-    # 🔥 อย่างอื่นเด้งหมด
-    return redirect("https://google.com")
+    # 🔥 browser เท่านั้นค่อยเด้ง
+    if "text/html" in accept:
+        return redirect("https://google.com")
+
+    return None
 
 
 # ================= ROOT =================
@@ -47,7 +50,7 @@ def root():
     if key != ACCESS_KEY:
         return "403", 403
 
-    r = redirect_browser()   # 🔥 เพิ่มบรรทัดนี้
+    r = redirect_browser()   # 🔥 สำคัญ
     if r:
         return r
 
@@ -58,6 +61,7 @@ def root():
         "author": "Zank",
         "image": "https://i.imgur.com/8Km9tLL.png",
         "url": f"{base}/home?key={ACCESS_KEY}",
+
         "groups": [
             {
                 "name": "👉 เข้าสู่ระบบ",
@@ -65,6 +69,7 @@ def root():
                 "import": False
             }
         ],
+
         "stations": [
             {
                 "name": "⚠️ Demo IPTV",
@@ -90,8 +95,6 @@ def home():
 
     return jsonify({
         "name": "DUFREE MENU",
-
-        # 🔥 กลุ่มใหญ่เหมือนรูป
         "groups": [
             {
                 "name": "📺 Digital TV",
@@ -99,7 +102,6 @@ def home():
                 "image": "https://i.imgur.com/8Km9tLL.png"
             }
         ],
-
         "stations": [
             {
                 "name": f"🌐 Online {len(online)} คน",
@@ -109,7 +111,7 @@ def home():
     })
 
 
-# ================= GROUP (แยก TV1/2/3) =================
+# ================= GROUP =================
 @app.route("/group")
 def group():
     key = request.args.get("key")
@@ -124,7 +126,6 @@ def group():
 
     base = request.host_url.rstrip("/")
 
-    # 🔥 ดึง sub group เช่น TV1 TV2
     subs = list(set([s["sub"] for s in STREAMS if s["group"] == g]))
 
     groups = []
